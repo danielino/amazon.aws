@@ -35,6 +35,7 @@ class AWSInventoryBase(BaseInventoryPlugin, Constructable, Cacheable, AWSPluginB
             "profile",
             "endpoint_url",
             "assume_role_arn",
+            "assume_role_external_id",
             "region",
             "regions",
         )
@@ -52,10 +53,10 @@ class AWSInventoryBase(BaseInventoryPlugin, Constructable, Cacheable, AWSPluginB
         def get(self, *args):
             value = self.original_options.get(*args)
             if (
-                not value
-                or not self.templar
-                or args[0] not in self.TEMPLATABLE_OPTIONS
-                or not self.templar.is_template(value)
+                    not value
+                    or not self.templar
+                    or args[0] not in self.TEMPLATABLE_OPTIONS
+                    or not self.templar.is_template(value)
             ):
                 return value
 
@@ -88,12 +89,14 @@ class AWSInventoryBase(BaseInventoryPlugin, Constructable, Cacheable, AWSPluginB
         kw_args.update(kwargs)
         return super().resource(*args, **kw_args)
 
-    def _freeze_iam_role(self, iam_role_arn):
+    def _freeze_iam_role(self, iam_role_arn, iam_role_external_id):
         if hasattr(self, "ansible_name"):
             role_session_name = f"ansible_aws_{self.ansible_name}_dynamic_inventory"
         else:
             role_session_name = "ansible_aws_dynamic_inventory"
         assume_params = {"RoleArn": iam_role_arn, "RoleSessionName": role_session_name}
+        if iam_role_external_id:
+            assume_params.update({"ExternalId": iam_role_external_id})
 
         try:
             sts = self.client("sts")
@@ -114,8 +117,9 @@ class AWSInventoryBase(BaseInventoryPlugin, Constructable, Cacheable, AWSPluginB
 
     def _set_frozen_credentials(self):
         iam_role_arn = self.get_option("assume_role_arn")
+        iam_role_external_id = self.get_option("assume_role_external_id") or None
         if iam_role_arn:
-            self._freeze_iam_role(iam_role_arn)
+            self._freeze_iam_role(iam_role_arn, iam_role_external_id)
 
     def _describe_regions(self, service):
         # Try pulling a list of regions from the service

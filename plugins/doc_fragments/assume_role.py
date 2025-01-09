@@ -22,4 +22,8 @@ options:
       - The ARN of the IAM role to assume to perform the lookup.
       - You should still provide AWS credentials with enough privilege to perform the AssumeRole action.
     aliases: ["iam_role_arn"]
+  assume_role_external_id:
+    description:
+      - The ExternalID to be used to perform assume role
+    aliases: ["iam_role_external_id"]
 """
